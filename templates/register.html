@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Register — SecureAuth{% endblock %}
+
+{% block body %}
+<div class="auth-card wide">
+
+  {# ── Brand ─────────────────────────────────────────── #}
+  <div class="brand">
+    <div class="brand-icon">🔐</div>
+    <h1>SecureAuth</h1>
+    <p>Create your account</p>
+  </div>
+
+  {#
+    Flash messages — shown when the server sends back errors or success.
+    get_flashed_messages(with_categories=true) returns a list of (category, message) pairs.
+    Category controls the colour: error=red, success=green, warning=orange, info=blue
+  #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul class="flash-list">
+        {% for category, message in messages %}
+          <li class="flash {{ category }}">⚠ {{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  {#
+    Registration Form
+    method="POST"  → sends data to the server
+    novalidate     → disables browser's default validation (we do our own)
+    prefill        → dict passed from the route to re-fill form after errors
+  #}
+  <form id="registerForm" method="POST" action="{{ url_for('auth.register') }}" novalidate>
+
+    {# CSRF token — Flask-WTF requires this hidden field on every POST form #}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+    {# ── Row 1: First Name + Last Name ──────────────────── #}
+    <div class="form-row">
+      <div class="form-group">
+        <label for="first_name">First Name *</label>
+        <input type="text"
+               id="first_name"
+               name="first_name"
+               required
+               placeholder="John"
+               value="{{ prefill.get('first_name', '') }}"
+               autocomplete="given-name"/>
+      </div>
+      <div class="form-group">
+        <label for="last_name">Last Name *</label>
+        <input type="text"
+               id="last_name"
+               name="last_name"
+               required
+               placeholder="Doe"
+               value="{{ prefill.get('last_name', '') }}"
+               autocomplete="family-name"/>
+      </div>
+    </div>
+
+    {# ── Row 2: Age + Gender ─────────────────────────────── #}
+    <div class="form-row">
+      <div class="form-group">
+        <label for="age">Age * (18–100)</label>
+        <input type="number"
+               id="age"
+               name="age"
+               required
+               placeholder="25"
+               min="18" max="100"
+               value="{{ prefill.get('age', '') }}"/>
+      </div>
+      <div class="form-group">
+        <label for="gender">Gender *</label>
+        <select id="gender" name="gender" required>
+          <option value="" disabled {% if not prefill.get('gender') %}selected{% endif %}>
+            Select…
+          </option>
+          {% for option in ['Male', 'Female', 'Non-binary', 'Prefer not to say'] %}
+            <option value="{{ option }}"
+              {% if prefill.get('gender') == option %}selected{% endif %}>
+              {{ option }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    {# ── Address ─────────────────────────────────────────── #}
+    <div class="form-group">
+      <label for="address">Address * (min 5 characters)</label>
+      <input type="text"
+             id="address"
+             name="address"
+             required
+             placeholder="123 Main Street, City"
+             value="{{ prefill.get('address', '') }}"
+             autocomplete="street-address"/>
+    </div>
+
+    {# ── Aadhar Number ───────────────────────────────────── #}
+    <div class="form-group">
+      <label for="aadhar">Aadhar Number * (exactly 12 digits)</label>
+      <input type="text"
+             id="aadhar"
+             name="aadhar"
+             required
+             placeholder="000000000000"
+             maxlength="12"
+             value="{{ prefill.get('aadhar', '') }}"
+             inputmode="numeric"/>
+    </div>
+
+    {# ── Email ───────────────────────────────────────────── #}
+    <div class="form-group">
+      <label for="email">Email * (@gmail.com only)</label>
+      <input type="email"
+             id="email"
+             name="email"
+             required
+             placeholder="yourname@gmail.com"
+             value="{{ prefill.get('email', '') }}"
+             autocomplete="email"/>
+    </div>
+
+    {# ── Phone Number (India only) ────────────────────────── #}
+    {#
+      India only: country code +91 is fixed (not a dropdown).
+      User enters only the 10-digit mobile number.
+      The backend adds +91 and stores as +91XXXXXXXXXX.
+    #}
+    <div class="form-group">
+      <label for="phone">Phone Number * (10 digits, starts with 6/7/8/9)</label>
+      <div class="phone-group">
+        {# Fixed country code — not editable #}
+        <span class="country-code">🇮🇳 +91</span>
+        <input type="tel"
+               id="phone"
+               name="phone"
+               required
+               placeholder="9876543210"
+               maxlength="10"
+               value="{{ prefill.get('phone', '') }}"
+               inputmode="numeric"
+               autocomplete="tel"/>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    {# ── Password ────────────────────────────────────────── #}
+    <div class="form-group">
+      <label for="password">Password *</label>
+      <input type="password"
+             id="password"
+             name="password"
+             required
+             placeholder="Min 8 chars · Upper · Lower · Number · Special"
+             autocomplete="new-password"/>
+      {# Strength bar — filled by JavaScript as user types #}
+      <div class="strength-bar">
+        <div class="strength-fill" id="strengthFill"></div>
+      </div>
+      <div class="strength-label" id="strengthLabel"></div>
+    </div>
+
+    {# ── Confirm Password ────────────────────────────────── #}
+    <div class="form-group">
+      <label for="confirm_password">Confirm Password *</label>
+      <input type="password"
+             id="confirm_password"
+             name="confirm_password"
+             required
+             placeholder="Repeat your password"
+             autocomplete="new-password"/>
+    </div>
+
+    {# ── Submit Button ───────────────────────────────────── #}
+    <button type="submit" class="btn btn-primary" style="margin-top:0.5rem">
+      <div class="spinner"></div>
+      <span class="btn-text">Continue to Verification →</span>
+    </button>
+
+  </form>
+
+  <div class="auth-links">
+    Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a>
+  </div>
+
+</div>
+{% endblock %}

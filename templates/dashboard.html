@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — SecureAuth{% endblock %}
+
+{% block body %}
+<div class="auth-card dashboard-card">
+
+  <div class="brand">
+    <div class="brand-icon">🏠</div>
+    <h1>Welcome back</h1>
+    <p>{{ user.first_name }} {{ user.last_name }}</p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul class="flash-list">
+        {% for category, message in messages %}
+          <li class="flash {{ category }}">✓ {{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <p class="section-title">Your Profile</p>
+
+  {# Profile information grid #}
+  <div class="user-info-grid">
+
+    <div class="info-item">
+      <div class="label">Full Name</div>
+      <div class="value">{{ user.first_name }} {{ user.last_name }}</div>
+    </div>
+
+    <div class="info-item">
+      <div class="label">Age</div>
+      <div class="value">{{ user.age }}</div>
+    </div>
+
+    <div class="info-item">
+      <div class="label">Gender</div>
+      <div class="value">{{ user.gender }}</div>
+    </div>
+
+    <div class="info-item">
+      <div class="label">Email</div>
+      <div class="value">{{ user.email }}</div>
+    </div>
+
+    <div class="info-item">
+      <div class="label">Phone</div>
+      <div class="value">{{ user.phone_number }}</div>
+    </div>
+
+    <div class="info-item">
+      <div class="label">Aadhar</div>
+      {# Only show last 4 digits for privacy — XXXX XXXX 3210 #}
+      <div class="value">XXXX XXXX {{ user.aadhar_number[-4:] }}</div>
+    </div>
+
+    <div class="info-item" style="grid-column: 1 / -1;">
+      <div class="label">Address</div>
+      <div class="value">{{ user.address }}</div>
+    </div>
+
+    <div class="info-item">
+      <div class="label">Member Since</div>
+      <div class="value">
+        {# Format the timestamp nicely, e.g. "14 Jun 2025" #}
+        {{ user.created_at.strftime('%d %b %Y') if user.created_at else '—' }}
+      </div>
+    </div>
+
+  </div>
+
+  <hr class="divider"/>
+
+  <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">
+    Sign Out →
+  </a>
+
+</div>
+{% endblock %}

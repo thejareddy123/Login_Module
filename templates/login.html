@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Login — SecureAuth{% endblock %}
+
+{% block body %}
+<div class="auth-card">
+
+  <div class="brand">
+    <div class="brand-icon">🔑</div>
+    <h1>SecureAuth</h1>
+    <p>Sign in to your account</p>
+  </div>
+
+  {# Flash messages from server (login errors, success, etc.) #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul class="flash-list">
+        {% for category, message in messages %}
+          <li class="flash {{ category }}">
+            {# Show a relevant icon for each message type #}
+            {% if category == 'success' %}✓
+            {% elif category == 'error' %}✗
+            {% else %}ℹ 
+            {% endif %}
+            {{ message }}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <form id="loginForm" method="POST" action="{{ url_for('auth.login') }}" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+    <div class="form-group">
+      <label for="email">Email</label>
+      {#
+        Keep email pre-filled after a failed login attempt.
+        The route passes email=email back to the template.
+        Password is intentionally NOT pre-filled for security.
+      #}
+      <input type="email"
+             id="email"
+             name="email"
+             required
+             placeholder="yourname@gmail.com"
+             value="{{ email if email is defined else '' }}"
+             autocomplete="email"/>
+    </div>
+
+    <div class="form-group">
+      <label for="password">Password</label>
+      {# Password field is always empty — never pre-fill passwords #}
+      <input type="password"
+             id="password"
+             name="password"
+             required
+             placeholder="Your password"
+             autocomplete="current-password"/>
+    </div>
+
+    {# Forgot password link — right-aligned #}
+    <div style="text-align:right; margin: -0.5rem 0 1rem;">
+      <a href="{{ url_for('auth.forgot_password') }}"
+         style="font-size:0.8rem; color:var(--gold); text-decoration:none;">
+        Forgot password?
+      </a>
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+      <div class="spinner"></div>
+      <span class="btn-text">Sign In</span>
+    </button>
+  </form>
+
+  <div class="auth-links">
+    Don't have an account? <a href="{{ url_for('auth.register') }}">Register</a>
+  </div>
+
+</div>
+{% endblock %}

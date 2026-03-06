@@ -1,0 +1,28 @@
+{#
+  base.html — Base layout template
+  All other pages extend this template using:  {% extends "base.html" %}
+
+  Blocks defined here can be overridden by child templates:
+    {% block title %}  — page title in the browser tab
+    {% block head %}   — extra CSS/JS in the <head>
+    {% block body %}   — main page content
+    {% block scripts %}— extra JS at the bottom
+#}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}SecureAuth{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+  {% block body %}{% endblock %}
+
+  <script src="{{ url_for('static', filename='auth.js') }}"></script>
+  {% block scripts %}{% endblock %}
+
+</body>
+</html>

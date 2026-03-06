@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Verify Email — SecureAuth{% endblock %}
+
+{% block body %}
+{#
+  How server timestamps reach JavaScript:
+  ─────────────────────────────────────────────────────────────
+  The server passes timing data as data-* attributes on this div.
+  JavaScript reads them (dataset.expiryTs, etc.) to resume timers
+  accurately even if the user refreshes the page mid-countdown.
+
+  expiry_ts  = Unix timestamp when the current OTP expires (0 if none sent yet)
+  last_sent  = Unix timestamp when the OTP was last sent    (0 if none sent yet)
+  cooldown   = Resend cooldown duration in seconds (30)
+  server_now = Current server time — used to correct for clock drift
+#}
+<div id="verifyPage"
+     class="auth-card"
+     data-expiry-ts="{{ expiry_ts }}"
+     data-sent-ts="{{ last_sent }}"
+     data-cooldown="{{ cooldown }}"
+     data-server-now="{{ server_now }}">
+
+  <div class="brand">
+    <div class="brand-icon">✉️</div>
+    <h1>Verify Email</h1>
+    <p>Confirm your identity to complete registration</p>
+  </div>
+
+  {# Show the user's email (they cannot change it here) #}
+  <div class="email-display">📧 {{ email }}</div>
+
+  {#
+    CSRF token — Flask-WTF requires this on every POST request.
+    JavaScript reads this value when calling fetch() (AJAX).
+  #}
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+  {# Status box — JavaScript writes success/error/warning messages here #}
+  <div id="otpStatus" class="flash" style="display:none"></div>
+
+
+  {# ══════════════════════════════════════════════════════
+     SECTION A — INITIAL STATE
+     Shown BEFORE the user clicks Send OTP.
+     Hidden after OTP is sent successfully.
+  ══════════════════════════════════════════════════════ #}
+  <div id="sendBtnSection">
+    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem; text-align:center;">
+      Click below to receive your 6-digit verification code by email.
+    </p>
+    <button id="sendOtpBtn" class="btn btn-primary">
+      <div class="spinner"></div>
+      <span class="btn-text">Send OTP to Email</span>
+    </button>
+  </div>
+
+
+  {# ══════════════════════════════════════════════════════
+     SECTION B — AFTER OTP IS SENT
+     Hidden initially. Shown after user clicks Send OTP.
+
+     Contains:
+       1. OTP input field
+       2. 3-minute expiry countdown  ("OTP expires in 02:59")
+       3. Resend section             (cooldown message + Resend button)
+       4. Verify button
+  ══════════════════════════════════════════════════════ #}
+  <div id="otpInputSection" style="display:none">
+
+    {# ── 1. OTP Input Field ──────────────────────────── #}
+    <div class="form-group">
+      <label for="otp_input">Enter 6-Digit OTP</label>
+      <input type="text"
+             id="otp_input"
+             class="otp-input"
+             placeholder="● ● ● ● ● ●"
+             maxlength="6"
+             inputmode="numeric"
+             autocomplete="one-time-code"/>
+    </div>
+
+    {# ── 2. OTP Expiry Countdown ─────────────────────── #}
+    {#
+      Shows: "OTP expires in 02:59", counting down every second.
+      When it hits 00:00 → JS hides this, enables Resend button.
+    #}
+    <div id="timerWrap" class="timer-wrap" style="display:none">
+      <span id="timerText">OTP expires in 03:00</span>
+    </div>
+
+    {# ── 3. Resend Section ───────────────────────────── #}
+    {#
+      Shown immediately when OTP is first sent.
+
+      DURING cooldown (0–30 seconds after send):
+        cooldownText shows "Resend OTP available in 30 seconds" (counting down)
+        resendBtn    is DISABLED
+
+      AFTER cooldown (30+ seconds after send, OTP still valid):
+        cooldownText is hidden
+        resendBtn    is ENABLED
+
+      WHEN OTP expires (after 3 minutes):
+        timerWrap    is hidden
+        cooldownText is hidden  (stop showing cooldown — it's irrelevant now)
+        resendBtn    is ENABLED immediately
+        otpStatus    shows "OTP expired. Click Resend OTP."
+    #}
+    <div id="resendSection"
+         style="display:none; text-align:center; margin:0.6rem 0 0.8rem;">
+
+      {# Cooldown countdown — JavaScript fills and shows/hides this #}
+      <p id="cooldownText"
+         style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.4rem; display:none;">
+      </p>
+
+      {# Resend button — disabled at start, enabled after cooldown or on expiry #}
+      <button id="resendBtn"
+              class="btn btn-secondary"
+              style="width:auto; padding:0.45rem 1.1rem; font-size:0.85rem;"
+              disabled>
+        ↺ Resend OTP
+      </button>
+    </div>
+
+    {# ── 4. Verify Button ────────────────────────────── #}
+    <button id="verifyOtpBtn"
+            class="btn btn-primary"
+            style="margin-top:0.4rem"
+            disabled>
+      <div class="spinner"></div>
+      <span class="btn-text">Verify &amp; Create Account ✓</span>
+    </button>
+
+  </div>{# end #otpInputSection #}
+
+
+  <hr class="divider"/>
+
+  <div class="auth-links">
+    <a href="{{ url_for('auth.register') }}">← Back to Edit Details</a>
+  </div>
+
+</div>{# end #verifyPage #}
+{% endblock %}

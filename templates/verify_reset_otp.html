@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Verify Reset OTP — SecureAuth{% endblock %}
+
+{% block body %}
+{#
+  data-* attributes pass server-computed timestamps to JavaScript.
+  This lets the JS timers start accurately even if the user refreshes
+  the page while a countdown is still running.
+
+  expiry_ts  = Unix timestamp when the OTP expires     (0 = no OTP sent yet)
+  last_sent  = Unix timestamp when the OTP was sent    (0 = no OTP sent yet)
+  cooldown   = Resend cooldown in seconds (30)
+  server_now = Current server time (helps JS correct for clock differences)
+#}
+<div id="verifyResetOtpPage"
+     class="auth-card"
+     data-expiry-ts="{{ expiry_ts }}"
+     data-sent-ts="{{ last_sent }}"
+     data-cooldown="{{ cooldown }}"
+     data-server-now="{{ server_now }}">
+
+  <div class="brand">
+    <div class="brand-icon">🔑</div>
+    <h1>Verify Reset Code</h1>
+    <p>Enter the 6-digit code sent to your email</p>
+  </div>
+
+  {# Display the email address (read-only — user cannot change it here) #}
+  <div class="email-display">📧 {{ email }}</div>
+
+  {#
+    CSRF token — required by Flask-WTF for every POST.
+    The Resend button calls fetch('/resend-reset-otp') and needs this.
+  #}
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+  {# Status message area — JavaScript writes resend feedback here #}
+  <div id="resetOtpStatus" class="flash" style="display:none"></div>
+
+  {# Flash messages from server (wrong OTP, expired, etc.) #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul class="flash-list">
+        {% for category, message in messages %}
+          <li class="flash {{ category }}">
+            {% if category == 'error' %}✗
+            {% elif category == 'success' %}✓
+            {% else %}ℹ
+            {% endif %}
+            {{ message }}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+
+  {# ══════════════════════════════════════════════════════
+     OTP VERIFICATION FORM
+
+     Unlike the registration verify page, the OTP for password
+     reset is sent server-side when the user submits their email
+     on /forgot-password. So the OTP input and timers are shown
+     immediately — there is no separate "Send OTP" button here.
+  ══════════════════════════════════════════════════════ #}
+  <form id="verifyResetOtpForm"
+        method="POST"
+        action="{{ url_for('auth.verify_reset_otp') }}"
+        novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+    {# ── 1. OTP Input ─────────────────────────────────── #}
+    <div class="form-group">
+      <label for="reset_otp_input">6-Digit Verification Code</label>
+      <input type="text"
+             id="reset_otp_input"
+             name="otp"
+             required
+             class="otp-input"
+             placeholder="● ● ● ● ● ●"
+             maxlength="6"
+             inputmode="numeric"
+             autocomplete="one-time-code"/>
+    </div>
+
+    {# ── 2. OTP Expiry Countdown ──────────────────────── #}
+    {#
+      Shows "OTP expires in 02:59" counting down.
+      When it hits 00:00 → JS hides timer, enables Resend button,
+      shows "OTP expired. Click Resend OTP."
+    #}
+    <div id="resetTimerWrap" class="timer-wrap" style="display:none">
+      <span id="resetTimerText">OTP expires in 03:00</span>
+    </div>
+
+    {# ── 3. Resend Section ───────────────────────────── #}
+    {#
+      Shown immediately on page load (since OTP was already sent).
+
+      DURING cooldown (0–30 seconds after send):
+        resetCooldownText shows "Resend OTP available in 30 seconds"
+        resetResendBtn    is DISABLED
+
+      AFTER cooldown:
+        resetCooldownText is hidden
+        resetResendBtn    is ENABLED
+
+      WHEN OTP expires:
+        Timer is hidden, cooldown message is hidden
+        resetResendBtn is ENABLED immediately
+        resetOtpStatus shows "OTP expired. Click Resend OTP."
+
+      IMPORTANT: Clicking Resend OTP calls /resend-reset-otp via AJAX.
+      The page does NOT redirect. The user stays here.
+    #}
+    <div id="resetResendSection"
+         style="text-align:center; margin:0.6rem 0 0.8rem;">
+
+      {# Cooldown message — JS fills and shows/hides this #}
+      <p id="resetCooldownText"
+         style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.4rem; display:none;">
+      </p>
+
+      {# Resend button — AJAX call, stays on page #}
+      <button type="button"
+              id="resetResendBtn"
+              class="btn btn-secondary"
+              style="width:auto; padding:0.45rem 1.1rem; font-size:0.85rem;"
+              disabled>
+        ↺ Resend OTP
+      </button>
+    </div>
+
+    <hr class="divider"/>
+
+    {# ── 4. Verify Button ─────────────────────────────── #}
+    <button type="submit"
+            id="verifyResetOtpBtn"
+            class="btn btn-primary">
+      <div class="spinner"></div>
+      <span class="btn-text">Verify OTP →</span>
+    </button>
+
+  </form>
+
+  <div class="auth-links">
+    <a href="{{ url_for('auth.forgot_password') }}">← Back</a>
+    &nbsp;·&nbsp;
+    <a href="{{ url_for('auth.login') }}">Sign In</a>
+  </div>
+
+</div>{# end #verifyResetOtpPage #}
+{% endblock %}
